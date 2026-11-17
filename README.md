@@ -42,6 +42,26 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:4175/coordinates' -Method Post -Content
 
 The endpoint returns HTTP `202` after publishing. `GET http://127.0.0.1:4175/health` reports whether the publisher's HTTP service is ready. This input endpoint binds to localhost by default; keep it private or add authentication before exposing it beyond a trusted machine.
 
+The map's **Find road route** form requests a driving route between the start and end, optionally passing through intermediate coordinates (one `latitude, longitude` pair per line). The route is drawn along roads on the map; these planned routes are not published as live GPS fixes. You can request a route directly:
+
+```powershell
+$path = @{
+  id = 'vehicle-07'
+  label = 'North crew'
+  start = @{ latitude = 37.7749; longitude = -122.4194 }
+  waypoints = @(
+    @{ latitude = 37.7780; longitude = -122.4160 }
+    @{ latitude = 37.7810; longitude = -122.4130 }
+  )
+  end = @{ latitude = 37.7849; longitude = -122.4094 }
+} | ConvertTo-Json -Depth 4
+
+$route = Invoke-RestMethod -Uri 'http://127.0.0.1:4175/paths' -Method Post -ContentType 'application/json' -Body $path
+$route.positions
+```
+
+Route requests must contain between 2 and 100 valid coordinates, counting the start and end. The included publisher requests driving routes from the OSRM demo service (`ROUTING_API_URL` can point to another OSRM-compatible routing service). The public demo service may be rate-limited or unavailable; use a hosted or self-managed routing service for production. The existing `/coordinates` endpoint remains available for streaming individual GPS fixes.
+
 ## Coordinate message format
 
 The publisher emits one JSON message per ZeroMQ frame:

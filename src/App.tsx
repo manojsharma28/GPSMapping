@@ -14,13 +14,21 @@ type GpsFix = {
   heading?: number
 }
 
+type PlannedRoute = {
+  id: string
+  label?: string
+  positions: [number, number][]
+}
+
 type FeedMessage =
   | { type: 'fix'; fix: GpsFix }
   | { type: 'status'; upstream: 'connecting' | 'connected' | 'error'; message?: string }
 
 const socketUrl = import.meta.env.VITE_GPS_SOCKET_URL || 'ws://localhost:4174'
 const coordinateApiUrl = import.meta.env.VITE_COORDINATE_API_URL || 'http://localhost:4175/coordinates'
+const pathApiUrl = coordinateApiUrl.replace(/\/coordinates$/, '/paths')
 const maxTrackPoints = 160
+const maxRouteLocations = 100
 
 const vehicleIcon = L.divIcon({
   className: 'vehicle-marker-wrap',
@@ -29,12 +37,16 @@ const vehicleIcon = L.divIcon({
   iconAnchor: [14, 14],
 })
 
-function MapFollower({ fix }: { fix?: GpsFix }) {
+function MapFollower({ fix, route }: { fix?: GpsFix; route?: PlannedRoute }) {
   const map = useMap()
 
   useEffect(() => {
-    if (fix) map.flyTo([fix.latitude, fix.longitude], Math.max(map.getZoom(), 14), { duration: 0.8 })
-  }, [fix, map])
+    if (route) {
+      map.fitBounds(L.latLngBounds(route.positions), { padding: [48, 48], maxZoom: 16 })
+    } else if (fix) {
+      map.flyTo([fix.latitude, fix.longitude], Math.max(map.getZoom(), 14), { duration: 0.8 })
+    }
+  }, [fix, map, route])
 
   return null
 }
@@ -44,8 +56,22 @@ function formatTime(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
+function parsePathCoordinates(value: string): Array<{ latitude: number; longitude: number }> {
+  const lines = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  return lines.map((line, index) => {
+    const parts = line.split(',').map((part) => part.trim())
+    const latitude = Number(parts[0])
+    const longitude = Number(parts[1])
+    if (parts.length !== 2 || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error(`Invalid coordinate on line ${index + 1}; use latitude, longitude within valid ranges`)
+    }
+    return { latitude, longitude }
+  })
+}
+
 function App() {
   const [fixes, setFixes] = useState<GpsFix[]>([])
+  const [plannedRoutes, setPlannedRoutes] = useState<PlannedRoute[]>([])
   const [socketStatus, setSocketStatus] = useState<'connecting' | 'connected' | 'offline'>('connecting')
   const [sourceStatus, setSourceStatus] = useState<'connecting' | 'connected' | 'error'>('connecting')
   const [sourceMessage, setSourceMessage] = useState('Waiting for bridge')
@@ -53,30 +79,53 @@ function App() {
   const [sendState, setSendState] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
   const [isSending, setIsSending] = useState(false)
 
-  async function sendCoordinate(event: FormEvent<HTMLFormElement>) {
+  async function sendPath(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const payload = {
-      id: String(formData.get('id')).trim(),
-      label: String(formData.get('label')).trim() || undefined,
-      latitude: Number(formData.get('latitude')),
-      longitude: Number(formData.get('longitude')),
-      timestamp: new Date().toISOString(),
+    const id = String(formData.get('id')).trim()
+    const label = String(formData.get('label')).trim() || undefined
+    const start = {
+      latitude: Number(formData.get('startLatitude')),
+      longitude: Number(formData.get('startLongitude')),
+    }
+    const end = {
+      latitude: Number(formData.get('endLatitude')),
+      longitude: Number(formData.get('endLongitude')),
     }
 
     setIsSending(true)
     setSendState(null)
     try {
-      const response = await fetch(coordinateApiUrl, {
+      const waypoints = parsePathCoordinates(String(formData.get('waypoints') || ''))
+      const coordinates = [start, ...waypoints, end]
+      if (coordinates.some(({ latitude, longitude }) => !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180)) {
+        throw new Error('Start and end coordinates must be within valid latitude and longitude ranges')
+      }
+      if (coordinates.length > maxRouteLocations) {
+        throw new Error(`A route can contain at most ${maxRouteLocations} coordinates`)
+      }
+
+      const response = await fetch(pathApiUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ id, label, start, end, waypoints }),
       })
-      const result = await response.json() as { error?: string }
-      if (!response.ok) throw new Error(result.error || `Publisher returned HTTP ${response.status}`)
-      setSendState({ kind: 'success', message: `Sent ${payload.id} to ZeroMQ` })
+      const result = await response.json() as { error?: string; id?: string; label?: string; positions?: [number, number][]; distance?: number }
+      if (!response.ok) throw new Error(result.error || `Routing service returned HTTP ${response.status}`)
+      if (!Array.isArray(result.positions) || result.positions.length < 2) throw new Error('Routing service returned no route geometry')
+      if (result.positions.some((position) => !Array.isArray(position) || position.length !== 2
+        || !Number.isFinite(position[0]) || position[0] < -90 || position[0] > 90
+        || !Number.isFinite(position[1]) || position[1] < -180 || position[1] > 180)) {
+        throw new Error('Routing service returned invalid route geometry')
+      }
+
+      const route: PlannedRoute = { id, label, positions: result.positions }
+      setPlannedRoutes((current) => [...current.filter((item) => item.id !== id), route])
+      setSelectedId(id)
+      const distance = result.distance === undefined ? '' : ` (${(result.distance / 1000).toFixed(1)} km)`
+      setSendState({ kind: 'success', message: `Road route found for ${id}${distance}` })
     } catch (error) {
-      setSendState({ kind: 'error', message: error instanceof Error ? error.message : 'Could not send coordinate' })
+      setSendState({ kind: 'error', message: error instanceof Error ? error.message : 'Could not send path' })
     } finally {
       setIsSending(false)
     }
@@ -101,8 +150,7 @@ function App() {
           }
           if (message.type === 'fix') {
             setFixes((current) => {
-              const next = [message.fix, ...current.filter((fix) => fix.id !== message.fix.id)].slice(0, 40)
-              return next
+              return [message.fix, ...current].slice(0, maxTrackPoints * 40)
             })
             setSelectedId((current) => current ?? message.fix.id)
           }
@@ -137,6 +185,7 @@ function App() {
   }, [fixes])
   const selectedDevice = devices.find((device) => device.id === selectedId) ?? devices[0]
   const selectedFix = selectedDevice?.latest
+  const selectedRoute = plannedRoutes.find((route) => route.id === selectedId) ?? plannedRoutes[plannedRoutes.length - 1]
   const sourceIsLive = socketStatus === 'connected' && sourceStatus === 'connected'
 
   return (
@@ -174,10 +223,10 @@ function App() {
             <span className={`source-indicator ${sourceIsLive ? 'online' : ''}`} />
           </div>
 
-          <form className="coordinate-form" onSubmit={sendCoordinate}>
+          <form className="coordinate-form" onSubmit={sendPath}>
             <div className="form-heading">
-              <span>SEND A POSITION</span>
-              <span>ZERO MQ</span>
+              <span>FIND A ROAD ROUTE</span>
+              <span>DRIVING</span>
             </div>
             <label className="form-field">
               <span>Device ID</span>
@@ -187,18 +236,35 @@ function App() {
               <span>Label <small>OPTIONAL</small></span>
               <input name="label" type="text" placeholder="Field unit" maxLength={128} />
             </label>
+            <div className="path-endpoint-heading">START</div>
             <div className="coordinate-fields">
               <label className="form-field">
                 <span>Latitude</span>
-                <input name="latitude" type="number" min="-90" max="90" step="any" placeholder="37.7749" required />
+                <input name="startLatitude" type="number" min="-90" max="90" step="any" placeholder="37.7749" required />
               </label>
               <label className="form-field">
                 <span>Longitude</span>
-                <input name="longitude" type="number" min="-180" max="180" step="any" placeholder="-122.4194" required />
+                <input name="startLongitude" type="number" min="-180" max="180" step="any" placeholder="-122.4194" required />
               </label>
             </div>
+            <div className="path-endpoint-heading">END</div>
+            <div className="coordinate-fields">
+              <label className="form-field">
+                <span>Latitude</span>
+                <input name="endLatitude" type="number" min="-90" max="90" step="any" placeholder="37.7849" required />
+              </label>
+              <label className="form-field">
+                <span>Longitude</span>
+                <input name="endLongitude" type="number" min="-180" max="180" step="any" placeholder="-122.4094" required />
+              </label>
+            </div>
+            <label className="form-field waypoints-field">
+              <span>Intermediate points <small>OPTIONAL</small></span>
+              <textarea name="waypoints" rows={3} placeholder={'37.7780, -122.4160\n37.7810, -122.4130'} />
+              <small>One latitude, longitude pair per line; the route follows roads through each point.</small>
+            </label>
             <button className="send-coordinate-button" type="submit" disabled={isSending}>
-              <Send size={14} /> {isSending ? 'Sending…' : 'Send coordinate'}
+              <Send size={14} /> {isSending ? 'Finding route…' : 'Find road route'}
             </button>
             {sendState && <p className={`send-feedback ${sendState.kind}`} role="status">{sendState.message}</p>}
           </form>
@@ -242,7 +308,7 @@ function App() {
           <div className="map-topline">
             <div className="map-title">
               <span className="map-kicker"><Signal size={14} /> REAL-TIME VIEW</span>
-              <strong>{selectedFix ? selectedFix.label || selectedFix.id : 'Awaiting GPS coordinates'}</strong>
+              <strong>{selectedRoute?.label || selectedRoute?.id || (selectedFix ? selectedFix.label || selectedFix.id : 'Awaiting GPS coordinates')}</strong>
             </div>
             <div className="map-tools">
               <span className="map-updates"><SignalHigh size={15} /> {fixes.length} FIXES</span>
@@ -262,7 +328,13 @@ function App() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <MapFollower fix={selectedFix} />
+              <MapFollower fix={selectedRoute ? undefined : selectedFix} route={selectedRoute} />
+              {selectedRoute && (
+                <Polyline
+                  positions={selectedRoute.positions}
+                  pathOptions={{ color: '#157a73', weight: 6, opacity: 0.88, lineCap: 'round', lineJoin: 'round' }}
+                />
+              )}
               {devices.map((device, index) => (
                 <span key={device.id}>
                   {device.history.length > 1 && <Polyline positions={device.history.map((fix) => [fix.latitude, fix.longitude] as [number, number])} pathOptions={{ color: ['#db4e3f', '#157a73', '#cc8f30', '#577bb5', '#8d5b9c'][index % 5], weight: 3, opacity: 0.72 }} />}
@@ -270,7 +342,7 @@ function App() {
                 </span>
               ))}
             </MapContainer>
-            {!selectedFix && (
+            {!selectedFix && !selectedRoute && (
               <div className="map-empty-state">
                 <div className="radar-mark"><Circle size={31} /><span /></div>
                 <strong>Map is ready</strong>
