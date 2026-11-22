@@ -1,0 +1,158 @@
+VERSION ""
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_:
+
+
+BO_ 18 gnss_pos_2: 8 Vector__XXX
+ SG_ PositionAccuracy_2 : 58|6@1+ (1,0) [0|63] "m" Vector__XXX
+ SG_ Latitude_2 : 1|28@1+ (1e-06,-90) [-90|90] "deg" Vector__XXX
+ SG_ Longitude_2 : 29|29@1+ (1e-06,-180) [-180|180] "deg" Vector__XXX
+ SG_ PositionValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 17 gnss_time_2: 6 Vector__XXX
+ SG_ TimeValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ TimeConfirmed_2 : 1|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ Epoch_2 : 8|40@1+ (0.001,1577840400) [1577840400|-1617615269] "sec" Vector__XXX
+
+BO_ 20 gnss_attitude_2: 8 Vector__XXX
+ SG_ AttitudeValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ Roll_2 : 1|12@1+ (0.1,-180) [-180|180] "deg" Vector__XXX
+ SG_ Pitch_2 : 22|12@1+ (0.1,-90) [-90|90] "deg" Vector__XXX
+ SG_ Heading_2 : 43|12@1+ (0.1,0) [0|360] "deg" Vector__XXX
+ SG_ RollAccuracy_2 : 13|9@1+ (0.1,0) [0|50] "deg" Vector__XXX
+ SG_ PitchAccuracy_2 : 34|9@1+ (0.1,0) [0|50] "deg" Vector__XXX
+ SG_ HeadingAccuracy_2 : 55|9@1+ (0.1,0) [0|50] "deg" Vector__XXX
+
+BO_ 21 gnss_odo_2: 8 Vector__XXX
+ SG_ DistanceTrip_2 : 1|22@1+ (1,0) [0|4194303] "m" Vector__XXX
+ SG_ DistanceAccuracy_2 : 23|19@1+ (1,0) [0|524287] "m" Vector__XXX
+ SG_ DistanceValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ DistanceTotal_2 : 42|22@1+ (1,0) [0|4194303] "km" Vector__XXX
+
+BO_ 16 gnss_status_2: 1 Vector__XXX
+ SG_ FixType_2 : 0|3@1+ (1,0) [0|5] "" Vector__XXX
+ SG_ Satellites_2 : 3|5@1+ (1,0) [0|31] "" Vector__XXX
+
+BO_ 19 gnss_altitude_2: 4 Vector__XXX
+ SG_ AltitudeValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ Altitude_2 : 1|18@1+ (0.1,-6000) [-6000|20000] "m" Vector__XXX
+ SG_ AltitudeAccuracy_2 : 19|13@1+ (1,0) [0|8000] "m" Vector__XXX
+
+BO_ 23 gnss_geofence_2: 2 Vector__XXX
+ SG_ FenceValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ FenceCombined_2 : 1|2@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ Fence1_2 : 8|2@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ Fence2_2 : 10|2@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ Fence3_2 : 12|2@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ Fence4_2 : 14|2@1+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 22 gnss_speed_2: 5 Vector__XXX
+ SG_ Speed_2 : 1|20@1+ (0.001,0) [0|1048.575] "m/s" Vector__XXX
+ SG_ SpeedAccuracy_2 : 21|19@1+ (0.001,0) [0|524.287] "m/s" Vector__XXX
+ SG_ SpeedValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 24 gnss_imu_2: 8 Vector__XXX
+ SG_ AccelerationX_2 : 1|10@1+ (0.125,-64) [-64|63.875] "m/s^2" Vector__XXX
+ SG_ AccelerationY_2 : 11|10@1+ (0.125,-64) [-64|63.875] "m/s^2" Vector__XXX
+ SG_ AccelerationZ_2 : 21|10@1+ (0.125,-64) [-64|63.875] "m/s^2" Vector__XXX
+ SG_ AngularRateX_2 : 31|11@1+ (0.25,-256) [-256|255.75] "deg/s" Vector__XXX
+ SG_ AngularRateY_2 : 42|11@1+ (0.25,-256) [-256|255.75] "deg/s" Vector__XXX
+ SG_ AngularRateZ_2 : 53|11@1+ (0.25,-256) [-256|255.75] "deg/s" Vector__XXX
+ SG_ ImuValid_2 : 0|1@1+ (1,0) [0|1] "" Vector__XXX
+
+
+
+CM_ BO_ 18 "GNSS position";
+CM_ SG_ 18 PositionAccuracy_2 "Accuracy of position";
+CM_ SG_ 18 Latitude_2 "Latitude";
+CM_ SG_ 18 Longitude_2 "Longitude";
+CM_ SG_ 18 PositionValid_2 "Position validity";
+CM_ BO_ 17 "GNSS time";
+CM_ SG_ 17 TimeValid_2 "Time validity";
+CM_ SG_ 17 TimeConfirmed_2 "Time confirmed";
+CM_ SG_ 17 Epoch_2 "Epoch time";
+CM_ BO_ 20 "GNSS attitude";
+CM_ SG_ 20 AttitudeValid_2 "Attitude validity";
+CM_ SG_ 20 Roll_2 "Vehicle roll";
+CM_ SG_ 20 Pitch_2 "Vehicle pitch";
+CM_ SG_ 20 Heading_2 "Vehicle heading";
+CM_ SG_ 20 RollAccuracy_2 "Vehicle roll accuracy";
+CM_ SG_ 20 PitchAccuracy_2 "Vehicle pitch accuracy";
+CM_ SG_ 20 HeadingAccuracy_2 "Vehicle heading accuracy";
+CM_ BO_ 21 "GNSS odometer";
+CM_ SG_ 21 DistanceTrip_2 "Distance traveled since last reset";
+CM_ SG_ 21 DistanceAccuracy_2 "Distance accuracy (1-sigma)";
+CM_ SG_ 21 DistanceTotal_2 "Distance traveled in total";
+CM_ BO_ 16 "GNSS information";
+CM_ SG_ 16 FixType_2 "Fix type";
+CM_ SG_ 16 Satellites_2 "Number of satellites used";
+CM_ BO_ 19 "GNSS altitude";
+CM_ SG_ 19 AltitudeValid_2 "Altitude validity";
+CM_ SG_ 19 Altitude_2 "Altitude";
+CM_ SG_ 19 AltitudeAccuracy_2 "Accuracy of altitude";
+CM_ BO_ 23 "GNSS geofence(s)";
+CM_ SG_ 23 FenceValid_2 "Geofencing status";
+CM_ SG_ 23 FenceCombined_2 "Combined (logical OR) state of all geofences";
+CM_ SG_ 23 Fence1_2 "Geofence 1 state";
+CM_ SG_ 23 Fence2_2 "Geofence 2 state";
+CM_ SG_ 23 Fence3_2 "Geofence 3 state";
+CM_ SG_ 23 Fence4_2 "Geofence 4 state";
+CM_ BO_ 22 "GNSS speed";
+CM_ SG_ 22 Speed_2 "Speed";
+CM_ SG_ 22 SpeedAccuracy_2 "Speed accuracy";
+CM_ BO_ 24 "GNSS IMU";
+CM_ SG_ 24 AccelerationX_2 "X acceleration with a resolution of 0.125 m/s^2";
+CM_ SG_ 24 AccelerationY_2 "Y acceleration with a resolution of 0.125 m/s^2";
+CM_ SG_ 24 AccelerationZ_2 "Z acceleration with a resolution of 0.125 m/s^2";
+CM_ SG_ 24 AngularRateX_2 "X angular rate with a resolution of 0.25 deg/s";
+CM_ SG_ 24 AngularRateY_2 "Y angular rate with a resolution of 0.25 deg/s";
+CM_ SG_ 24 AngularRateZ_2 "Z angular rate with a resolution of 0.25 deg/s";
+VAL_ 18 PositionValid_2 0 "Invalid" 1 "Valid" ;
+VAL_ 17 TimeValid_2 0 "Invalid" 1 "Valid" ;
+VAL_ 17 TimeConfirmed_2 0 "Unconfirmed" 1 "Confirmed" ;
+VAL_ 20 AttitudeValid_2 0 "Invalid" 1 "Valid" ;
+VAL_ 21 DistanceValid_2 0 "Invalid" 1 "Valid" ;
+VAL_ 16 FixType_2 0 "No fix" 1 "Dead reckoning only" 2 "2D-fix" 3 "3D-fix" 4 "GNSS + dead reckoning combined" 5 "Time only fix" ;
+VAL_ 19 AltitudeValid_2 0 "Invalid" 1 "Valid" ;
+VAL_ 23 FenceValid_2 0 "Invalid" 1 "Valid" ;
+VAL_ 23 FenceCombined_2 0 "Unknown" 1 "Inside" 2 "Outside" ;
+VAL_ 23 Fence1_2 0 "Unknown" 1 "Inside" 2 "Outside" ;
+VAL_ 23 Fence2_2 0 "Unknown" 1 "Inside" 2 "Outside" ;
+VAL_ 23 Fence3_2 0 "Unknown" 1 "Inside" 2 "Outside" ;
+VAL_ 23 Fence4_2 0 "Unknown" 1 "Inside" 2 "Outside" ;
+VAL_ 22 SpeedValid_2 0 "Invalid" 1 "Valid" ;
+VAL_ 24 ImuValid_2 0 "Invalid" 1 "Valid" ;
+

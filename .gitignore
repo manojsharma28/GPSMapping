@@ -8,12 +8,17 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+**/bin/
+**/obj/
+.venv/
 dist
 dist-ssr
 *.local
 .env
 .env.*
 !.env.example
+__pycache__/
+*.py[cod]
 
 # Editor directories and files
 .vscode/*

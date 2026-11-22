@@ -5,7 +5,10 @@ A live GPS tracking web app. The React + Leaflet browser client receives positio
 ## Requirements
 
 - Node.js 20.19+ or 22.12+
+- .NET 9 SDK
 - npm
+
+The MDF4 player is implemented in C# and uses the .NET 9 SDK; no Python installation or Python packages are needed for playback. Python is only needed if you choose to run the optional MDF4 demo-generation script.
 
 ## Start the complete local stack
 
@@ -41,6 +44,32 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:4175/coordinates' -Method Post -Content
 ```
 
 The endpoint returns HTTP `202` after publishing. `GET http://127.0.0.1:4175/health` reports whether the publisher's HTTP service is ready. This input endpoint binds to localhost by default; keep it private or add authentication before exposing it beyond a trusted machine.
+
+## Play GPS data from an MDF4 file
+
+1. Start the app with `npm run dev` and open its Vite URL.
+2. In **MDF4 GPS Player**, select an `.mf4` file. Device ID and playback speed can be changed under **Playback options**.
+3. Click **Play MDF4 file**. The reader decodes valid coordinates and first sends the track's start and end coordinates through ZeroMQ. To reduce traffic, playback keeps the first and last fixes and sends an intermediate fix when the bearing changes by at least 8 degrees. The map fits the track bounds, and the WebSocket bridge forwards published fixes to Leaflet in recorded order. The player lists latitude and longitude fixes as they arrive from ZeroMQ. Playback defaults to 10x recorded time; set the speed to `0` to send fixes as fast as possible.
+
+Latitude and longitude channels are detected automatically when their names include `Latitude`/`Longitude` or use common `lat`/`lon` names. Set the channel fields to exact channel names if detection picks the wrong signals. The upload limit is 256 MB.
+
+MDF4 files with already-decoded coordinate channels need no DBC file. For raw CAN logs, place the matching DBC at `server/data/gnss-middle.dbc` or set `MDF4_DATABASE_FILE` to its path before starting `npm run dev`. The supplied sample GNSS DBC decodes `Latitude_2` and `Longitude_2` and filters invalid position fixes.
+
+### Generate a Delhi-Mumbai Expressway MDF4 demo
+
+Create a GPS MDF4 file that can be uploaded in the playback panel:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\create_delhi_mumbai_mdf4.py
+```
+
+By default, this writes `server/data/delhi-mumbai-expressway-demo.mf4` with `Latitude`, `Longitude`, and `PositionValid` channels. Upload that file using **Play an MDF4 GPS log**. The built-in route is a synthetic, approximate expressway-corridor demo, not surveyed or actual vehicle GPS data. For an exact road trace, supply a GeoJSON `LineString` from a verified Delhi-Mumbai Expressway route:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\create_delhi_mumbai_mdf4.py --route-geojson .\expressway-route.geojson
+```
+
+Use `--spacing-meters` and `--sample-interval` to adjust the generated track density and timestamps.
 
 The map's **Find road route** form requests a driving route between the start and end, optionally passing through intermediate coordinates (one `latitude, longitude` pair per line). The route is drawn along roads on the map; these planned routes are not published as live GPS fixes. You can request a route directly:
 

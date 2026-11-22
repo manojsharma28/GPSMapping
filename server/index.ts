@@ -7,6 +7,14 @@ const topic = process.env.ZMQ_TOPIC || ''
 const wss = new WebSocketServer({ port: socketPort })
 const clients = new Set<WebSocket>()
 
+type TrackStart = {
+  type: 'track-start'
+  id: string
+  label?: string
+  start: { latitude: number; longitude: number }
+  end: { latitude: number; longitude: number }
+}
+
 function broadcast(message: object) {
   const payload = JSON.stringify(message)
   for (const client of clients) {
@@ -61,6 +69,29 @@ function toFix(payload: Record<string, unknown>) {
   }
 }
 
+function toTrackStart(payload: Record<string, unknown>): TrackStart | undefined {
+  if (payload.type !== 'track-start') return undefined
+  const id = String(payload.id ?? '').trim()
+  if (!id || id.length > 128) return undefined
+  const label = payload.label ? String(payload.label).trim() : undefined
+  if (label && label.length > 128) return undefined
+
+  const readCoordinate = (value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+    const point = value as Record<string, unknown>
+    const latitude = Number(point.latitude ?? point.lat)
+    const longitude = Number(point.longitude ?? point.lon ?? point.lng)
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return undefined
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return undefined
+    return { latitude, longitude }
+  }
+
+  const start = readCoordinate(payload.start)
+  const end = readCoordinate(payload.end)
+  if (!start || !end) return undefined
+  return { type: 'track-start', id, ...(label ? { label } : {}), start, end }
+}
+
 async function runSubscriber() {
   const subscriber = new Subscriber()
   subscriber.receiveTimeout = 1000
@@ -78,6 +109,15 @@ async function runSubscriber() {
         console.info(`ZeroMQ message received from ${zmqEndpoint}`)
       }
       const payload = parseCoordinateFrame(frames[frames.length - 1])
+      if (payload?.type === 'track-start') {
+        const trackStart = toTrackStart(payload)
+        if (trackStart) {
+          broadcast(trackStart)
+        } else {
+          console.warn('Ignored ZeroMQ track start without valid ID and start/end coordinates')
+        }
+        continue
+      }
       const fix = payload && toFix(payload)
       if (fix) {
         broadcast({ type: 'fix', fix })
